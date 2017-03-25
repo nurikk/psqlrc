@@ -1,5 +1,5 @@
 with _data as (
-    select regexp_replace(schemaname || '.' || tablename, E'_\\d+_prt_\\d+$' , '') as tbl, --for partitioned tables
+    select regexp_replace(schemaname || '.' || tablename, E'_\\d+_prt_.+$' , '') as tbl, --for partitioned tables
     coalesce(pg_relation_size(schemaname || '.' || tablename), 0) as size,
     coalesce(pg_total_relation_size(schemaname || '.' || tablename),0) as total_size
     from pg_tables WHERE schemaname not similar to E'(information\\_schema|pg_%|gp_%)'

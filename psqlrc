@@ -74,12 +74,13 @@
 -- Greenplum
 \set gplocks 'SELECT pg_class.relname AS table,pg_database.datname AS database,transaction, pid, mode, granted, pg_locks.gp_segment_id as segment FROM pg_locks, pg_class, pg_database, pg_stat_activity WHERE pg_locks.relation = pg_class.oid AND pg_locks.database = pg_database.oid and pg_stat_activity.procpid = pg_locks.pid and pid!=pg_backend_pid() ORDER BY pg_class.relname, mode;'
 \set gplocksfull 'SELECT pg_class.relname AS table,pg_database.datname AS database,transaction, pid, mode, granted, current_query FROM pg_locks, pg_class, pg_database, pg_stat_activity WHERE pg_locks.relation = pg_class.oid AND pg_locks.database = pg_database.oid and pg_stat_activity.procpid = pg_locks.pid and pid!=pg_backend_pid() ORDER BY pg_class.relname, mode;'
-\set gpps 'SELECT waiting, procpid, age(query_start, clock_timestamp()), usename, application_name, current_query as current_query FROM pg_stat_activity WHERE current_query != ''<IDLE>'' AND current_query NOT ILIKE ''%pg_stat_activity%'' ORDER BY query_start;'
+\set gpps 'SELECT waiting, procpid, sess_id, age(query_start, clock_timestamp()), usename, application_name, current_query as current_query FROM pg_stat_activity WHERE current_query != ''<IDLE>'' AND current_query NOT ILIKE ''%pg_stat_activity%'' ORDER BY query_start;'
 \set gpwaiting 'SELECT procpid, age(query_start, clock_timestamp()), usename, application_name, waiting, current_query as current_query FROM pg_stat_activity WHERE current_query != ''<IDLE>'' AND current_query NOT ILIKE ''%pg_stat_activity%'' and waiting ORDER BY query_start;'
 \set gp_kill_1h 'SELECT pg_terminate_backend(procpid) FROM pg_stat_activity WHERE clock_timestamp() - query_start > interval ''1 hour'';'
 \set gp_workfiles 'select procpid,usename, current_query,state, pg_size_pretty(size::bigint) as size, numfiles from gp_toolkit.gp_workfile_usage_per_query where procpid != pg_backend_pid() order by size desc;'
 \set gp_workfile_entries 'select procpid,usename, optype, pg_size_pretty(workmem::bigint) as workmem, pg_size_pretty(size::bigint) as size, state from gp_toolkit.gp_workfile_entries where procpid != pg_backend_pid() order by size desc;'
 \set gp_size `cat ~/psql_aliases/sql/gp_size.sql`
+\set gp_ao_bloat `cat ~/psql_aliases/sql/gp_ao_bloat.sql`
 -- Development queries
 
 \set apg_logs 'select age(now(), log_time) as ago, age(log_time, session_start_time), application_name, message, query from pglog where log_time > now() - interval ''1 hour'' order by age desc;'
