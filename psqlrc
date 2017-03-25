@@ -96,4 +96,5 @@
 \set size `cat ~/psql_aliases/sql/size.sql`
 \set top_io `cat ~/psql_aliases/sql/top_io.sql`
 \set top_index `cat ~/psql_aliases/sql/top_index.sql`
-set application_name to 'nur@mac';
+\set app_name `echo $USER@$(hostname -s)`
+set application_name to :'app_name';
