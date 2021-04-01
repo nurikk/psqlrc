@@ -1,9 +1,9 @@
-\set QUIET 1
+\set QUIET yes
 -- formatting
 --\x auto
-
+\set AUTOCOMMIT off
 \set VERBOSITY verbose
-\set ON_ERROR_ROLLBACK interactive
+-- \set ON_ERROR_ROLLBACK interactive
 -- show execution times
 \timing
 -- limit paging
@@ -15,7 +15,8 @@
 
 -- colorize
 --\set PROMPT1 '%[%033[33;1m%]%x%[%033[0m%]%[%033[1m%]%/%[%033[0m%]%R%# '
---\set PROMPT1 '%[%033[1m%]%M %n@%/%R%[%033[0m%]%# '
+\set PROMPT1 '%[%033[1m%]%M %n@%/%R%[%033[0m%]%# '
+\set PROMPT1 '\n%[%033[1;31;40m%] ➤ %[%033[32m%]psql:%[%033[36m%]//%n%[%033[34m%]@%[%033[36m%]%M:%>%[%033[33m%]/%/ %[%033[K%]%[%033[0m%]\n\n%[%033[1;33m%]%#%[%033[0m%] '
 ----harolds
 --\set PROMPT1 '%[%033[1m%]%M/%/%R%[%033[0m%]%# '
 
@@ -36,12 +37,12 @@
 \set clear '\\! clear;'
 
 --helpful queries
-\set uptime 'select now() - backend_start as uptime from pg_stat_activity where pid = pg_backend_pid();'
+\set uptime 'select clock_timestamp() - backend_start as uptime from pg_stat_activity where pid = pg_backend_pid();'
 \set show_slow_queries 'SELECT (total_time / 1000 / 60) as total_minutes, (total_time/calls) as average_time, query FROM pg_stat_statements ORDER BY 1 DESC LIMIT 100;'
 \set settings 'select name, setting,unit,context from pg_settings;'
 \set conninfo 'select usename, count(*) from pg_stat_activity group by usename;'
 \set activity 'select datname, pid, usename, application_name,client_addr, client_hostname, client_port, query, state from pg_stat_activity;'
-\set waits 'SELECT pg_stat_activity.pid, pg_stat_activity.query, pg_stat_activity.waiting, now() - pg_stat_activity.query_start AS \"totaltime\", pg_stat_activity.backend_start FROM pg_stat_activity WHERE pg_stat_activity.query !~ \'%IDLE%\'::text AND pg_stat_activity.waiting = true;'
+\set waits 'SELECT pg_stat_activity.pid, pg_stat_activity.query, pg_stat_activity.waiting, clock_timestamp() - pg_stat_activity.query_start AS \"totaltime\", pg_stat_activity.backend_start FROM pg_stat_activity WHERE pg_stat_activity.query !~ \'%IDLE%\'::text AND pg_stat_activity.waiting = true;'
 \set dbsize 'SELECT datname, pg_size_pretty(pg_database_size(datname)) db_size FROM pg_database ORDER BY db_size;'
 \set uselesscol 'SELECT nspname, relname, attname, typname, (stanullfrac*100)::int AS null_percent, case when stadistinct >= 0 then stadistinct else abs(stadistinct)*reltuples end AS \"distinct\", case 1 when stakind1 then stavalues1 when stakind2 then stavalues2 end AS \"values\" FROM pg_class c JOIN pg_namespace ns ON (ns.oid=relnamespace) JOIN pg_attribute ON (c.oid=attrelid) JOIN pg_type t ON (t.oid=atttypid) JOIN pg_statistic ON (c.oid=starelid AND staattnum=attnum) WHERE nspname NOT LIKE E\'pg\\\\_%\' AND nspname != \'information_schema\' AND relkind=\'r\' AND NOT attisdropped AND attstattarget != 0 AND reltuples >= 100 AND stadistinct BETWEEN 0 AND 1 ORDER BY nspname, relname, attname;'
 
@@ -69,7 +70,7 @@
 \set missing_indexes 'SELECT relname, seq_scan-idx_scan AS too_much_seq, case when seq_scan-idx_scan > 0 THEN ''Missing Index?'' ELSE ''OK'' END, pg_relation_size(relname::regclass) AS rel_size, seq_scan, idx_scan FROM pg_stat_all_tables WHERE schemaname=''public'' AND pg_relation_size(relname::regclass) > 80000 ORDER BY too_much_seq DESC;'
 
 
-\set kill_1h 'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND state = ''idle'' AND state_change < current_timestamp - INTERVAL ''1'' HOUR;'
+\set kill_1h 'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND state = ''idle'' AND backend_start < current_timestamp - INTERVAL ''1'' HOUR and usename = CURRENT_USER;'
 
 -- Greenplum
 \set gplocks 'SELECT pg_class.relname AS table,pg_database.datname AS database,transaction, pid, mode, granted, pg_locks.gp_segment_id as segment FROM pg_locks, pg_class, pg_database, pg_stat_activity WHERE pg_locks.relation = pg_class.oid AND pg_locks.database = pg_database.oid and pg_stat_activity.procpid = pg_locks.pid and pid!=pg_backend_pid() ORDER BY pg_class.relname, mode;'
@@ -83,10 +84,6 @@
 \set gp_ao_bloat `cat ~/psql_aliases/sql/gp_ao_bloat.sql`
 -- Development queries
 
-\set apg_logs 'select age(now(), log_time) as ago, age(log_time, session_start_time), application_name, message, query from pglog where log_time > now() - interval ''1 hour'' order by age desc;'
-\set apg_logs2 'select age(now(), log_time) as ago, age(log_time, session_start_time), application_name, message, query from pglog where log_time > now() - interval ''2 hour'' order by age desc;'
-\set apg_logs3 'select age(now(), log_time) as ago, age(log_time, session_start_time), application_name, message, query from pglog where log_time > now() - interval ''3 hour'' order by age desc;'
-
 \set sp 'SHOW search_path;'
 \set clear '\\! clear;'
 \set ll '\\! ls -lrt;'
@@ -99,3 +96,13 @@
 \set top_index `cat ~/psql_aliases/sql/top_index.sql`
 \set app_name `echo $USER@$(hostname -s)`
 set application_name to :'app_name';
+
+SET search_path TO analytics,public;
+
+-- Redshift
+\set rps 'select pid, user_name, starttime, query from stv_recent where status='Running';'
+\set rsyncerrors 'select table_name, error, DATEDIFF(minute, getdate(),error_time ),error_time from syncstat.awsdms_apply_exceptions order by error_time desc limit 50;'
+
+
+-- Set noisyness back to normal
+\unset QUIET
